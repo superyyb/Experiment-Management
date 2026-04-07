@@ -1,8 +1,9 @@
 ## Experiment Records Management Platform
 
-A full-stack **Spring Boot + MyBatis + React** platform to manage **50,000+** experimental records and streamline R&D data entry, search, and collaboration workflows.
+🚀 Full-stack experiment management platform handling 50,000+ records with Redis caching (83% latency reduction), RBAC security, and Dockerized deployment.
+👉 Built with Spring Boot + MyBatis + React
 
-### Highlights (resume-ready)
+### Highlights
 
 - Developed a full-stack Spring Boot + MyBatis + React platform to manage 50,000+ experimental records, streamlining R&D data entry, search, and collaboration workflows
 - Designed a normalized MySQL schema and index strategy; implemented Redis caching (TTL + write-through invalidation, hot-key safeguards) to reduce repeated search latency by 83% (350ms to 60ms)
@@ -36,20 +37,16 @@ A full-stack **Spring Boot + MyBatis + React** platform to manage **50,000+** ex
 - **Infra**: Docker, Docker Compose, GitHub Actions
 - **Testing**: JUnit 5, Testcontainers (MySQL 8 + Redis 7)
 
-### Caching Strategy (Redis)
+### Caching (Redis)
 
-- **What is cached**
-  - **Record details** (`findById`): Spring Cache → Redis, TTL **1 hour**
-  - **Search results** (`search`): manual Redis JSON cache, TTL **30 minutes**
-- **Consistency**
-  - Mutations (`create/update/delete`) trigger **write-through invalidation** by clearing search-cache keys and evicting record cache.
-- **Hot-key safeguards**
-  - Search queries use a **canonicalized + MD5-digested key** (bounded length) to avoid oversized keys and reduce hot-query pressure.
+- Cached record details (TTL 1h) and search results (TTL 30m)
+- Write-through invalidation on mutations (create/update/delete)
+- Canonicalized + hashed keys to prevent hot-key issues
 
-### Security (RBAC)
+### Security
 
-- JWT authentication + Spring Security method-level authorization (RBAC).
-- Example: `/experiments/search` requires a valid JWT and role-based access.
+- JWT authentication + Spring Security RBAC
+- Protected endpoints (e.g., `/experiments/search`) require valid tokens
 
 ### Quick Start (Docker Compose)
 
@@ -66,13 +63,10 @@ Services:
 - **MySQL**: `localhost:3306`
 - **Redis**: `localhost:6379`
 
-### Tests (JUnit 5 + Testcontainers)
+### Testing
 
-Integration tests spin up **MySQL 8** and **Redis 7** via Testcontainers, then validate:
-
-- MyBatis DAO queries (e.g., search counts)
-- caching behavior (search-cache keys written to Redis)
-- RBAC-protected endpoints (JWT-gated access)
+- Integration tests using JUnit 5 + Testcontainers (MySQL 8 + Redis 7)
+- Covers DAO queries, caching behavior, and RBAC endpoints
 
 ```bash
 cd backend
