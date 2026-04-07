@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rndlab.backend.mapper.CompositionMapper">
+
+    <resultMap id="CompositionMap" type="com.rndlab.backend.entity.Composition">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="formula" column="formula"/>
+        <result property="category" column="category"/>
+        <result property="description" column="description"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="CompositionMap">
+        SELECT * FROM compositions ORDER BY name
+    </select>
+
+    <select id="findById" resultMap="CompositionMap">
+        SELECT * FROM compositions WHERE id = #{id}
+    </select>
+
+</mapper>
+

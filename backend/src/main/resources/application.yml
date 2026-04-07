@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: rnd-lab-management
+  
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/rnd_lab_management?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectionCollation=utf8mb4_unicode_ci&useServerPrepStmts=true&rewriteBatchedStatements=true
+    username: root
+    password: root123
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+  
+  # Jackson配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.rndlab.backend.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# 应用配置
+app:
+  jwt:
+    secret: rndLabManagementSecretKey2024ForJWTTokenGeneration
+    expiration: 86400000 # 24小时（毫秒）
+  cache:
+    # TTL aligned with RedisConfig; mutations use @CacheEvict (write-through style invalidation)
+    experiment-record-ttl: 3600
+    search-result-ttl: 1800
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.rndlab: DEBUG
+    org.springframework.security: DEBUG
+

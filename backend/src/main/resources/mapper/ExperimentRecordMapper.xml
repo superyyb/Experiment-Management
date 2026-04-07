@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rndlab.backend.mapper.ExperimentRecordMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="ExperimentRecordMap" type="com.rndlab.backend.entity.ExperimentRecord">
+        <id property="id" column="id"/>
+        <result property="recordNumber" column="record_number"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="compositionId" column="composition_id"/>
+        <result property="processId" column="process_id"/>
+        <result property="experimentDate" column="experiment_date"/>
+        <result property="status" column="status"/>
+        <result property="teamId" column="team_id"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        
+        <!-- 关联查询：成分 -->
+        <association property="composition" javaType="com.rndlab.backend.entity.Composition">
+            <id property="id" column="comp_id"/>
+            <result property="name" column="comp_name"/>
+            <result property="formula" column="comp_formula"/>
+            <result property="category" column="comp_category"/>
+        </association>
+        
+        <!-- 关联查询：工艺 -->
+        <association property="process" javaType="com.rndlab.backend.entity.Process">
+            <id property="id" column="proc_id"/>
+            <result property="name" column="proc_name"/>
+            <result property="processType" column="proc_type"/>
+            <result property="temperature" column="proc_temperature"/>
+            <result property="pressure" column="proc_pressure"/>
+            <result property="duration" column="proc_duration"/>
+        </association>
+        
+        <!-- 关联查询：团队 -->
+        <association property="team" javaType="com.rndlab.backend.entity.Team">
+            <id property="id" column="team_id"/>
+            <result property="teamName" column="team_name"/>
+        </association>
+    </resultMap>
+
+    <!-- 根据ID查询 -->
+    <select id="findById" resultMap="ExperimentRecordMap">
+        SELECT 
+            er.*,
+            c.id as comp_id, c.name as comp_name, c.formula as comp_formula, c.category as comp_category,
+            p.id as proc_id, p.name as proc_name, p.process_type as proc_type, 
+            p.temperature as proc_temperature, p.pressure as proc_pressure, p.duration as proc_duration,
+            t.team_name
+        FROM experiment_records er
+        LEFT JOIN compositions c ON er.composition_id = c.id
+        LEFT JOIN processes p ON er.process_id = p.id
+        LEFT JOIN teams t ON er.team_id = t.id
+        WHERE er.id = #{id}
+    </select>
+
+    <!-- 高级搜索SQL - 支持过滤、范围、模糊匹配、排序 -->
+    <select id="search" resultMap="ExperimentRecordMap">
+        SELECT 
+            er.*,
+            c.id as comp_id, c.name as comp_name, c.formula as comp_formula, c.category as comp_category,
+            p.id as proc_id, p.name as proc_name, p.process_type as proc_type, 
+            p.temperature as proc_temperature, p.pressure as proc_pressure, p.duration as proc_duration,
+            t.team_name
+        FROM experiment_records er
+        LEFT JOIN compositions c ON er.composition_id = c.id
+        LEFT JOIN processes p ON er.process_id = p.id
+        LEFT JOIN teams t ON er.team_id = t.id
+        <where>
+            <!-- 模糊匹配：关键词搜索（标题、描述） -->
+            <if test="search.keyword != null and search.keyword != ''">
+                AND (
+                    er.title LIKE CONCAT('%', #{search.keyword}, '%')
+                    OR er.description LIKE CONCAT('%', #{search.keyword}, '%')
+                )
+            </if>
+            
+            <!-- 模糊匹配：实验编号 -->
+            <if test="search.recordNumber != null and search.recordNumber != ''">
+                AND er.record_number LIKE CONCAT('%', #{search.recordNumber}, '%')
+            </if>
+            
+            <!-- 过滤：状态 -->
+            <if test="search.status != null and search.status != ''">
+                AND er.status = #{search.status}
+            </if>
+            
+            <!-- 过滤：团队 -->
+            <if test="search.teamId != null">
+                AND er.team_id = #{search.teamId}
+            </if>
+            
+            <!-- 过滤：成分 -->
+            <if test="search.compositionId != null">
+                AND er.composition_id = #{search.compositionId}
+            </if>
+            
+            <!-- 过滤：工艺 -->
+            <if test="search.processId != null">
+                AND er.process_id = #{search.processId}
+            </if>
+            
+            <!-- 过滤：创建人 -->
+            <if test="search.createdBy != null">
+                AND er.created_by = #{search.createdBy}
+            </if>
+            
+            <!-- 范围：实验日期 -->
+            <if test="search.startDate != null">
+                AND er.experiment_date >= #{search.startDate}
+            </if>
+            <if test="search.endDate != null">
+                AND er.experiment_date &lt;= #{search.endDate}
+            </if>
+            
+            <!-- 范围：温度 -->
+            <if test="search.minTemperature != null">
+                AND p.temperature >= #{search.minTemperature}
+            </if>
+            <if test="search.maxTemperature != null">
+                AND p.temperature &lt;= #{search.maxTemperature}
+            </if>
+            
+            <!-- 范围：压力 -->
+            <if test="search.minPressure != null">
+                AND p.pressure >= #{search.minPressure}
+            </if>
+            <if test="search.maxPressure != null">
+                AND p.pressure &lt;= #{search.maxPressure}
+            </if>
+            
+            <!-- 属性过滤：如果指定了属性条件，需要关联properties表 -->
+            <if test="search.propertyName != null and search.propertyName != ''">
+                AND EXISTS (
+                    SELECT 1 FROM properties prop
+                    WHERE prop.experiment_id = er.id
+                    AND prop.property_name = #{search.propertyName}
+                    <if test="search.minPropertyValue != null">
+                        AND prop.property_value >= #{search.minPropertyValue}
+                    </if>
+                    <if test="search.maxPropertyValue != null">
+                        AND prop.property_value &lt;= #{search.maxPropertyValue}
+                    </if>
+                    <if test="search.propertyType != null and search.propertyType != ''">
+                        AND prop.property_type = #{search.propertyType}
+                    </if>
+                )
+            </if>
+        </where>
+        
+        <!-- 排序 -->
+        <choose>
+            <when test="search.sortBy != null and search.sortBy != ''">
+                ORDER BY 
+                <choose>
+                    <when test="search.sortBy == 'createdAt'">er.created_at</when>
+                    <when test="search.sortBy == 'experimentDate'">er.experiment_date</when>
+                    <when test="search.sortBy == 'recordNumber'">er.record_number</when>
+                    <when test="search.sortBy == 'title'">er.title</when>
+                    <otherwise>er.created_at</otherwise>
+                </choose>
+                <choose>
+                    <when test="search.sortOrder == 'ASC'">ASC</when>
+                    <when test="search.sortOrder == 'DESC'">DESC</when>
+                    <otherwise>DESC</otherwise>
+                </choose>
+            </when>
+            <otherwise>
+                ORDER BY er.created_at DESC
+            </otherwise>
+        </choose>
+        
+        <!-- 分页 -->
+        LIMIT #{search.pageSize} OFFSET #{offset}
+    </select>
+
+    <!-- 统计搜索结果总数 -->
+    <select id="countSearch" resultType="Long">
+        SELECT COUNT(DISTINCT er.id)
+        FROM experiment_records er
+        LEFT JOIN compositions c ON er.composition_id = c.id
+        LEFT JOIN processes p ON er.process_id = p.id
+        LEFT JOIN teams t ON er.team_id = t.id
+        <where>
+            <!-- 与search方法相同的WHERE条件 -->
+            <if test="search.keyword != null and search.keyword != ''">
+                AND (
+                    er.title LIKE CONCAT('%', #{search.keyword}, '%')
+                    OR er.description LIKE CONCAT('%', #{search.keyword}, '%')
+                )
+            </if>
+            <if test="search.recordNumber != null and search.recordNumber != ''">
+                AND er.record_number LIKE CONCAT('%', #{search.recordNumber}, '%')
+            </if>
+            <if test="search.status != null and search.status != ''">
+                AND er.status = #{search.status}
+            </if>
+            <if test="search.teamId != null">
+                AND er.team_id = #{search.teamId}
+            </if>
+            <if test="search.compositionId != null">
+                AND er.composition_id = #{search.compositionId}
+            </if>
+            <if test="search.processId != null">
+                AND er.process_id = #{search.processId}
+            </if>
+            <if test="search.createdBy != null">
+                AND er.created_by = #{search.createdBy}
+            </if>
+            <if test="search.startDate != null">
+                AND er.experiment_date >= #{search.startDate}
+            </if>
+            <if test="search.endDate != null">
+                AND er.experiment_date &lt;= #{search.endDate}
+            </if>
+            <if test="search.minTemperature != null">
+                AND p.temperature >= #{search.minTemperature}
+            </if>
+            <if test="search.maxTemperature != null">
+                AND p.temperature &lt;= #{search.maxTemperature}
+            </if>
+            <if test="search.minPressure != null">
+                AND p.pressure >= #{search.minPressure}
+            </if>
+            <if test="search.maxPressure != null">
+                AND p.pressure &lt;= #{search.maxPressure}
+            </if>
+            <if test="search.propertyName != null and search.propertyName != ''">
+                AND EXISTS (
+                    SELECT 1 FROM properties prop
+                    WHERE prop.experiment_id = er.id
+                    AND prop.property_name = #{search.propertyName}
+                    <if test="search.minPropertyValue != null">
+                        AND prop.property_value >= #{search.minPropertyValue}
+                    </if>
+                    <if test="search.maxPropertyValue != null">
+                        AND prop.property_value &lt;= #{search.maxPropertyValue}
+                    </if>
+                    <if test="search.propertyType != null and search.propertyType != ''">
+                        AND prop.property_type = #{search.propertyType}
+                    </if>
+                )
+            </if>
+        </where>
+    </select>
+
+    <!-- 插入 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO experiment_records (
+            record_number, title, description, composition_id, process_id,
+            experiment_date, status, team_id, created_by
+        ) VALUES (
+            #{recordNumber}, #{title}, #{description}, #{compositionId}, #{processId},
+            #{experimentDate}, #{status}, #{teamId}, #{createdBy}
+        )
+    </insert>
+
+    <!-- 更新 -->
+    <update id="update">
+        UPDATE experiment_records
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="compositionId != null">composition_id = #{compositionId},</if>
+            <if test="processId != null">process_id = #{processId},</if>
+            <if test="experimentDate != null">experiment_date = #{experimentDate},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="teamId != null">team_id = #{teamId},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除 -->
+    <delete id="delete">
+        DELETE FROM experiment_records WHERE id = #{id}
+    </delete>
+
+    <!-- 根据实验编号查询 -->
+    <select id="findByRecordNumber" resultMap="ExperimentRecordMap">
+        SELECT 
+            er.*,
+            c.id as comp_id, c.name as comp_name, c.formula as comp_formula, c.category as comp_category,
+            p.id as proc_id, p.name as proc_name, p.process_type as proc_type, 
+            p.temperature as proc_temperature, p.pressure as proc_pressure, p.duration as proc_duration,
+            t.team_name
+        FROM experiment_records er
+        LEFT JOIN compositions c ON er.composition_id = c.id
+        LEFT JOIN processes p ON er.process_id = p.id
+        LEFT JOIN teams t ON er.team_id = t.id
+        WHERE er.record_number = #{recordNumber}
+    </select>
+
+</mapper>
+
